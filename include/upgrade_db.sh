@@ -1,4 +1,4 @@
-# Copyright (C) 2013 - 2018 Teddysun <i@teddysun.com>
+# Copyright (C) 2013 - 2019 Teddysun <i@teddysun.com>
 # 
 # This file is part of the LAMP script.
 #
@@ -14,12 +14,12 @@
 #upgrade database
 upgrade_db(){
 
-    if [ ! -d ${mysql_location} ] && [ ! -d ${mariadb_location} ] && [ ! -d ${percona_location} ]; then
+    if [ ! -d "${mysql_location}" ] && [ ! -d "${mariadb_location}" ] && [ ! -d "${percona_location}" ]; then
         log "Error" "MySQL or MariaDB or Percona looks like not installed, please check it and try again."
         exit 1
     fi
 
-    update_date=`date +"%Y%m%d"`
+    update_date=$(date +"%Y%m%d")
     bkup_file="mysqld_${update_date}.bak"
 
     if [ -d ${mysql_location} ]; then
@@ -65,14 +65,16 @@ upgrade_db(){
         db_flg="percona"
         bkup_dir="${cur_dir}/percona_bkup"
         mysql_dump="${bkup_dir}/percona_all_backup_${update_date}.dump"
-        installed_percona=$(${percona_location}/bin/mysql -V | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+        installed_percona=$(${percona_location}/bin/mysql -V | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\-[0-9]+')
         percona_ver=$(echo ${installed_percona} | cut -d. -f1-2)
         if   [ "${percona_ver}" == "5.5" ]; then
-            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-5.5/LATEST/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.5/{print $2}' | cut -d'"' -f1)
+            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-5.5/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.5/{print $2}' | cut -d'"' -f1)
         elif [ "${percona_ver}" == "5.6" ]; then
-            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-5.6/LATEST/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.6/{print $2}' | cut -d'"' -f1)
+            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-5.6/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.6/{print $2}' | cut -d'"' -f1)
         elif [ "${percona_ver}" == "5.7" ]; then
-            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-LATEST/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.7/{print $2}' | cut -d'"' -f1)
+            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-5.7/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-5.7/{print $2}' | cut -d'"' -f1)
+        elif [ "${percona_ver}" == "8.0" ]; then
+            latest_percona=$(curl -s https://www.percona.com/downloads/Percona-Server-8.0/ | grep 'selected' | head -1 | awk -F '/Percona-Server-' '/Percona-Server-8.0/{print $2}' | cut -d'"' -f1)
         fi
 
         echo -e "Latest version of Percona: \033[41;37m ${latest_percona} \033[0m"
@@ -102,14 +104,11 @@ upgrade_db(){
     echo "---------------------------"
     echo
     echo "Press any key to start...or Press Ctrl+C to cancel"
-    char=`get_char`
-
+    char=$(get_char)
 
     if [[ "${upgrade_db}" = "y" || "${upgrade_db}" = "Y" ]]; then
         log "Info" "$(db_name) upgrade start..."
-
-        mysql_count=$(ps -ef | grep -v grep | grep -c "mysqld")
-        if [ ${mysql_count} -eq 0 ]; then
+        if [ $(ps -ef | grep -v grep | grep -c "mysqld") -eq 0 ]; then
             log "Info" "$(db_name) looks like not running, Try to starting $(db_name)..."
             /etc/init.d/mysqld start > /dev/null 2>&1
             if [ $? -ne 0 ]; then
@@ -118,7 +117,7 @@ upgrade_db(){
             fi
         fi
 
-        if [ ! -d ${bkup_dir} ]; then
+        if [ ! -d "${bkup_dir}" ]; then
             mkdir -p ${bkup_dir}
         fi
 
@@ -156,9 +155,8 @@ EOF
         fi
         cd ${cur_dir}/software
 
-        if [ -d ${mysql_location} ]; then
-
-            if [ -d ${mysql_location}.bak ]; then
+        if [ -d "${mysql_location}" ]; then
+            if [ -d "${mysql_location}.bak" ]; then
                 rm -rf ${mysql_location}.bak
             fi
             mv ${mysql_location} ${mysql_location}.bak
@@ -167,22 +165,20 @@ EOF
 
             is_64bit && sys_bit=x86_64 || sys_bit=i686
             log "Info" "Downloading and Extracting MySQL files..."
+
+            mysql_filename="mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}"
             if [ "${mysql_ver}" == "8.0" ]; then
-                url1="https://cdn.mysql.com/Downloads/MySQL-${mysql_ver}/mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.xz"
-                url2="${download_root_url}/mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.xz"
-                mysql_file="mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.xz"
-                download_from_url "${mysql_file}" "${url1}" "${url2}"
-                tar Jxf ${mysql_file}
+                mysql_filename_url="https://cdn.mysql.com/Downloads/MySQL-${mysql_ver}/${mysql_filename}.tar.xz"
+                download_file "${mysql_filename}.tar.xz" "${mysql_filename_url}"
+                tar Jxf ${mysql_filename}.tar.xz
             else
-                url1="https://cdn.mysql.com/Downloads/MySQL-${mysql_ver}/mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.gz"
-                url2="${download_root_url}/mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.gz"
-                mysql_file="mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}.tar.gz"
-                download_from_url "${mysql_file}" "${url1}" "${url2}"
-                tar zxf ${mysql_file}
+                mysql_filename_url="https://cdn.mysql.com/Downloads/MySQL-${mysql_ver}/${mysql_filename}.tar.gz"
+                download_file "${mysql_filename}.tar.gz" "${mysql_filename_url}"
+                tar zxf ${mysql_filename}.tar.gz
             fi
 
             log "Info" "Moving MySQL files..."
-            mv mysql-${latest_mysql}-linux-glibc2.12-${sys_bit}/* ${mysql_location}
+            mv ${mysql_filename}/* ${mysql_location}
 
             chown -R mysql:mysql ${mysql_location} ${datalocation}
             cp -f ${mysql_location}/support-files/mysql.server /etc/init.d/mysqld
@@ -198,42 +194,35 @@ EOF
 
             create_lib64_dir "${mysql_location}"
 
-        elif [ -d ${mariadb_location} ]; then
-
-            if [ -d ${mariadb_location}.bak ]; then
+        elif [ -d "${mariadb_location}" ]; then
+            if [ -d "${mariadb_location}.bak" ]; then
                 rm -rf ${mariadb_location}.bak
             fi
             mv ${mariadb_location} ${mariadb_location}.bak
             mkdir -p ${mariadb_location}
             [ ! -d ${datalocation} ] && mkdir -p ${datalocation}
 
-            if [ "$(get_ip_country)" == "CN" ]; then
-                down_addr1=http://mirrors.aliyun.com/mariadb/
-                down_addr2=http://sfo1.mirrors.digitalocean.com/mariadb/
-            else
-                down_addr1=http://sfo1.mirrors.digitalocean.com/mariadb/
-                down_addr2=http://mirrors.aliyun.com/mariadb/
-            fi
-
-            libc_version=`getconf -a | grep GNU_LIBC_VERSION | awk '{print $NF}'`
-
-            if version_lt ${libc_version} 2.14; then
+            if version_lt $(get_libc_version) 2.14; then
                 glibc_flag=linux
             else
                 glibc_flag=linux-glibc_214
             fi
-            
             is_64bit && sys_bit_a=x86_64 || sys_bit_a=x86
             is_64bit && sys_bit_b=x86_64 || sys_bit_b=i686
 
-            download_from_url "mariadb-${latest_mariadb}-${glibc_flag}-${sys_bit_b}.tar.gz" \
-            "${down_addr1}/mariadb-${latest_mariadb}/bintar-${glibc_flag}-${sys_bit_a}/mariadb-${latest_mariadb}-${glibc_flag}-${sys_bit_b}.tar.gz" \
-            "${down_addr2}/mariadb-${latest_mariadb}/bintar-${glibc_flag}-${sys_bit_a}/mariadb-${latest_mariadb}-${glibc_flag}-${sys_bit_b}.tar.gz"
+            mariadb_filename="mariadb-${latest_mariadb}-${glibc_flag}-${sys_bit_b}"
+            if [ "$(get_ip_country)" == "CN" ]; then
+                mariadb_filename_url="http://mirrors.aliyun.com/mariadb/mariadb-${latest_mariadb}/bintar-${glibc_flag}-${sys_bit_a}/${mariadb_filename}.tar.gz"
+            else
+                mariadb_filename_url="http://sfo1.mirrors.digitalocean.com/mariadb/mariadb-${latest_mariadb}/bintar-${glibc_flag}-${sys_bit_a}/${mariadb_filename}.tar.gz"
+            fi
+
+            download_file "${mariadb_filename}.tar.gz" "${mariadb_filename_url}"
 
             log "Info" "Extracting MariaDB files..."
-            tar zxf mariadb-${latest_mariadb}-${glibc_flag}-${sys_bit_b}.tar.gz
+            tar zxf ${mariadb_filename}.tar.gz
             log "Info" "Moving MariaDB files..."
-            mv mariadb-${latest_mariadb}-*-${sys_bit_b}/* ${mariadb_location}
+            mv ${mariadb_filename}/* ${mariadb_location}
 
             chown -R mysql:mysql ${mariadb_location} ${datalocation}
             cp -f ${mariadb_location}/support-files/mysql.server /etc/init.d/mysqld
@@ -245,9 +234,8 @@ EOF
 
             create_lib64_dir "${mariadb_location}"
 
-        elif [ -d ${percona_location} ]; then
-
-            if [ -d ${percona_location}.bak ]; then
+        elif [ -d "${percona_location}" ]; then
+            if [ -d "${percona_location}.bak" ]; then
                 rm -rf ${percona_location}.bak
             fi
             mv ${percona_location} ${percona_location}.bak
@@ -256,7 +244,15 @@ EOF
 
             is_64bit && sys_bit=x86_64 || sys_bit=i686
             if check_sys packageManager apt; then
-                ssl_ver="ssl100"
+                if [ -n "$(get_debianversion)" ] && [ $(get_debianversion) -lt 9 ]; then
+                    ssl_ver="ssl100"
+                fi
+                if [ -n "$(get_ubuntuversion)" ] && [ $(get_ubuntuversion) -ge 14 ]; then
+                    ssl_ver="ssl102"
+                fi
+                if [ -n "$(get_debianversion)" ] && [ $(get_debianversion) -eq 9 ]; then
+                    ssl_ver="ssl102"
+                fi
             elif check_sys packageManager yum; then
                 ssl_ver="ssl101"
             fi
@@ -266,20 +262,19 @@ EOF
             down_addr="https://www.percona.com/downloads/Percona-Server-${percona_ver}/Percona-Server-${latest_percona}/binary/tarball"
 
             if [[ "${percona_ver}" == "5.5" || "${percona_ver}" == "5.6" ]]; then
-                tarball="${major_ver}-rel${rel_ver}-Linux.${sys_bit}.${ssl_ver}"
+                percona_filename="${major_ver}-rel${rel_ver}-Linux.${sys_bit}.${ssl_ver}"
             fi
-            if [[ "${percona_ver}" == "5.7" ]]; then
-                tarball="Percona-Server-${latest_percona}-Linux.${sys_bit}.${ssl_ver}"
+            if [[ "${percona_ver}" == "5.7" || "${percona_ver}" == "8.0" ]]; then
+                percona_filename="Percona-Server-${latest_percona}-Linux.${sys_bit}.${ssl_ver}"
             fi
 
-            url1="${down_addr}/${tarball}.tar.gz"
-            url2="${download_root_url}/${tarball}.tar.gz"
+            percona_filename_url="${down_addr}/${percona_filename}.tar.gz"
 
-            download_from_url "${tarball}.tar.gz" "${url1}" "${url2}"
+            download_file "${percona_filename}.tar.gz" "${percona_filename_url}"
             log "Info" "Extracting Percona Server files..."
-            tar zxf ${tarball}.tar.gz
+            tar zxf ${percona_filename}.tar.gz
             log "Info" "Moving Percona Server files..."
-            mv ${tarball}/* ${percona_location}
+            mv ${percona_filename}/* ${percona_location}
 
             chown -R mysql:mysql ${percona_location} ${datalocation}
             cp -f ${percona_location}/support-files/mysql.server /etc/init.d/mysqld
@@ -287,12 +282,12 @@ EOF
             sed -i "s:^datadir=.*:datadir=${datalocation}:g" /etc/init.d/mysqld
             chmod +x /etc/init.d/mysqld
 
-            sed -ir "s@/usr/local/${tarball}@${percona_location}@g" ${percona_location}/bin/mysqld_safe
-            sed -ir "s@/usr/local/${tarball}@${percona_location}@g" ${percona_location}/bin/mysql_config
+            sed -ir "s@/usr/local/${percona_filename}@${percona_location}@g" ${percona_location}/bin/mysqld_safe
+            sed -ir "s@/usr/local/${percona_filename}@${percona_location}@g" ${percona_location}/bin/mysql_config
 
-            if [ ${percona_ver} == "5.5" ] || [ ${percona_ver} == "5.6" ]; then
+            if [ "${percona_ver}" == "5.5" ] || [ "${percona_ver}" == "5.6" ]; then
                 ${percona_location}/scripts/mysql_install_db --basedir=${percona_location} --datadir=${datalocation} --user=mysql
-            elif [ ${percona_ver} == "5.7" ]; then
+            elif [ "${percona_ver}" == "5.7" ] || [ "${percona_ver}" == "8.0" ]; then
                 ${percona_location}/bin/mysqld --initialize-insecure --basedir=${percona_location} --datadir=${datalocation} --user=mysql
             fi
 
@@ -302,7 +297,7 @@ EOF
             cd ${percona_location}/lib/
             ln -s libperconaserverclient.a libmysqlclient.a
             ln -s libperconaserverclient.so libmysqlclient.so
-            if [ ${percona_ver} != "5.7" ]; then
+            if [ "${percona_ver}" != "5.7" ] && [ "${percona_ver}" != "8.0" ]; then
                 ln -s libperconaserverclient_r.a libmysqlclient_r.a
                 ln -s libperconaserverclient_r.so libmysqlclient_r.so
             fi
@@ -318,7 +313,7 @@ EOF
             log "Error" "Starting $(db_name) failed, Please check it and try again!"
             exit 5
         fi
-        if [ "${mysql_ver}" == "8.0" ]; then
+        if [ "${mysql_ver}" == "8.0" ] || [ "${percona_ver}" == "8.0" ]; then
             /usr/bin/mysql -uroot -hlocalhost -e "create user root@'127.0.0.1' identified by \"${mysql_root_password}\";"
             /usr/bin/mysql -uroot -hlocalhost -e "grant all privileges on *.* to root@'127.0.0.1' with grant option;"
             /usr/bin/mysql -uroot -hlocalhost -e "grant all privileges on *.* to root@'localhost' with grant option;"
